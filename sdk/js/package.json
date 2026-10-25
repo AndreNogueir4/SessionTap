@@ -1,0 +1,34 @@
+{
+  "name": "sessiontap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Use the session you already have in your browser from Node.js scripts — via the local SessionTap daemon.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndreNogueir4/SessionTap.git",
+    "directory": "sdk/js"
+  },
+  "keywords": ["session", "cookies", "playwright", "puppeteer", "automation", "scraping"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5"
+  }
+}

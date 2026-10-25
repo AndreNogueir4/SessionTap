@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Build outputs
+extension/dist/
+dashboard/dist/
+sdk/js/dist/
+core/src/sessiontap/server/web/
+
+# Captured data, secrets and local state — never commit these
+*.db
+*.db-wal
+*.db-shm
+*.har
+*.sessiontap
+token
+cookies.txt
+*.pem
+.env
+.env.*
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local-only files (not published)
+Scripts/

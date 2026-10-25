@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "SessionTap",
+  "version": "1.0.0",
+  "default_locale": "en",
+  "description": "__MSG_extDescription__",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sessiontap@andrenogueir4.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "permissions": [
+    "nativeMessaging",
+    "activeTab",
+    "webRequest",
+    "cookies",
+    "storage",
+    "scripting"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SessionTap",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  },
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ]
+}

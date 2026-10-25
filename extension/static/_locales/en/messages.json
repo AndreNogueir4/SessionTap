@@ -1,0 +1,168 @@
+{
+  "extDescription": {
+    "message": "Hand the session you already have in your browser to your own scripts — locally, opt-in per tab."
+  },
+  "connConnected": {
+    "message": "Connected"
+  },
+  "connConnecting": {
+    "message": "Connecting…"
+  },
+  "connDaemonOffline": {
+    "message": "Daemon off — run `sessiontap start`"
+  },
+  "connHostMissing": {
+    "message": "Run `sessiontap install-host`"
+  },
+  "healthOk": {
+    "message": "Session OK"
+  },
+  "healthWarning": {
+    "message": "Some credentials expire soon"
+  },
+  "healthExpired": {
+    "message": "Session expired — log in again"
+  },
+  "healthEmpty": {
+    "message": "No cookies or tokens yet"
+  },
+  "nextExpiry": {
+    "message": "next expiry in $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "lastActivity": {
+    "message": "Last activity $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "never": {
+    "message": "never"
+  },
+  "ago": {
+    "message": "$ARG1$ ago",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "expired": {
+    "message": "expired"
+  },
+  "browserSession": {
+    "message": "browser session"
+  },
+  "allowSites": {
+    "message": "Allow SessionTap on websites"
+  },
+  "recordTab": {
+    "message": "Record this tab"
+  },
+  "stopRecording": {
+    "message": "Stop recording"
+  },
+  "stopCapturing": {
+    "message": "Stop capturing"
+  },
+  "recordingThisTab": {
+    "message": "Recording this tab"
+  },
+  "cannotCapture": {
+    "message": "This page can't be captured"
+  },
+  "noteBlocked": {
+    "message": "On your blocklist: never captured."
+  },
+  "noteRecording": {
+    "message": "Recording this tab. It follows you to other sites until you stop."
+  },
+  "noteCaptured": {
+    "message": "This site is captured in every tab."
+  },
+  "noteKept": {
+    "message": "Not recording. Data captured earlier is kept."
+  },
+  "flowTotal": {
+    "message": "Whole recording ($ARG1$ sites) · requests: $ARG2$ · cookies: $ARG3$ · tokens: $ARG4$ · storage: $ARG5$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      },
+      "arg3": {
+        "content": "$3"
+      },
+      "arg4": {
+        "content": "$4"
+      },
+      "arg5": {
+        "content": "$5"
+      }
+    }
+  },
+  "statRequests": {
+    "message": "requests"
+  },
+  "statCookies": {
+    "message": "cookies"
+  },
+  "statTokens": {
+    "message": "tokens"
+  },
+  "statStorage": {
+    "message": "storage"
+  },
+  "cookies": {
+    "message": "Cookies"
+  },
+  "tokens": {
+    "message": "Tokens"
+  },
+  "valuesHint": {
+    "message": "Values stay encrypted in the vault. See them in the dashboard → Session."
+  },
+  "latestRequests": {
+    "message": "Latest requests"
+  },
+  "recentEmpty": {
+    "message": "Browse the site; API calls show up here."
+  },
+  "capturing": {
+    "message": "Capturing"
+  },
+  "nothingCaptured": {
+    "message": "Nothing. Press “Record this tab” on a site."
+  },
+  "sentThisSession": {
+    "message": "Sent this session:"
+  },
+  "openDashboard": {
+    "message": "Open dashboard"
+  },
+  "removeDomain": {
+    "message": "Stop capturing $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "failed": {
+    "message": "Failed"
+  },
+  "daemonUnreachable": {
+    "message": "Could not reach the daemon."
+  },
+  "blocklisted": {
+    "message": "This site is on the blocklist."
+  }
+}

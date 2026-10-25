@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SessionTap</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="icons/icon48.png" alt="" width="20" height="20" />
+      <strong>SessionTap</strong>
+      <span id="connection" class="connection" data-state="connecting" data-i18n="connConnecting"></span>
+    </header>
+
+    <section class="site">
+      <div class="site-head">
+        <div id="site" class="domain">…</div>
+        <span id="rec" class="rec" hidden>REC</span>
+      </div>
+      <button id="permission" type="button" hidden data-i18n="allowSites"></button>
+      <button id="toggle" type="button" hidden data-i18n="recordTab"></button>
+      <p id="note" class="note" role="status"></p>
+      <div id="flow" class="flow" hidden></div>
+      <p id="flow-total" class="muted small flow-total" hidden></p>
+    </section>
+
+    <section id="summary" hidden>
+      <div class="stats">
+        <div class="stat"><b id="count-requests">0</b><span data-i18n="statRequests"></span></div>
+        <div class="stat"><b id="count-cookies">0</b><span data-i18n="statCookies"></span></div>
+        <div class="stat"><b id="count-tokens">0</b><span data-i18n="statTokens"></span></div>
+        <div class="stat"><b id="count-storage">0</b><span data-i18n="statStorage"></span></div>
+      </div>
+      <div id="health" class="health" data-status="empty">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="health-text" data-i18n="healthEmpty"></span>
+      </div>
+      <p id="last-seen" class="muted small"></p>
+
+      <details id="cookies-box" class="box">
+        <summary><span data-i18n="cookies"></span> <span id="cookies-n" class="muted"></span></summary>
+        <ul id="cookies" class="items"></ul>
+      </details>
+      <details id="tokens-box" class="box">
+        <summary><span data-i18n="tokens"></span> <span id="tokens-n" class="muted"></span></summary>
+        <ul id="tokens" class="items"></ul>
+      </details>
+      <p class="muted small hint" data-i18n="valuesHint"></p>
+
+      <h2 data-i18n="latestRequests"></h2>
+      <ul id="recent" class="recent"></ul>
+      <p id="recent-empty" class="muted small" data-i18n="recentEmpty"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="capturing"></h2>
+      <ul id="domains" class="domains"></ul>
+      <p id="none" class="muted small" data-i18n="nothingCaptured"></p>
+    </section>
+
+    <footer>
+      <span class="muted small"><span data-i18n="sentThisSession"></span> <span id="sent">0</span></span>
+      <button id="dashboard" type="button" class="link" data-i18n="openDashboard"></button>
+    </footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,168 @@
+{
+  "extDescription": {
+    "message": "Entregue a sessão que você já tem no navegador para os seus scripts — localmente, só nas abas que você escolher."
+  },
+  "connConnected": {
+    "message": "Conectado"
+  },
+  "connConnecting": {
+    "message": "Conectando…"
+  },
+  "connDaemonOffline": {
+    "message": "Daemon desligado — rode `sessiontap start`"
+  },
+  "connHostMissing": {
+    "message": "Rode `sessiontap install-host`"
+  },
+  "healthOk": {
+    "message": "Sessão OK"
+  },
+  "healthWarning": {
+    "message": "Algumas credenciais expiram em breve"
+  },
+  "healthExpired": {
+    "message": "Sessão expirada — faça login de novo"
+  },
+  "healthEmpty": {
+    "message": "Nenhum cookie ou token ainda"
+  },
+  "nextExpiry": {
+    "message": "próxima expiração em $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "lastActivity": {
+    "message": "Última atividade $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "never": {
+    "message": "nunca"
+  },
+  "ago": {
+    "message": "há $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "expired": {
+    "message": "expirado"
+  },
+  "browserSession": {
+    "message": "sessão do navegador"
+  },
+  "allowSites": {
+    "message": "Permitir o SessionTap nos sites"
+  },
+  "recordTab": {
+    "message": "Gravar esta aba"
+  },
+  "stopRecording": {
+    "message": "Parar gravação"
+  },
+  "stopCapturing": {
+    "message": "Parar captura"
+  },
+  "recordingThisTab": {
+    "message": "Gravando esta aba"
+  },
+  "cannotCapture": {
+    "message": "Esta página não pode ser capturada"
+  },
+  "noteBlocked": {
+    "message": "Na sua lista de bloqueio: nunca é capturado."
+  },
+  "noteRecording": {
+    "message": "Gravando esta aba. A gravação te acompanha em outros sites até você parar."
+  },
+  "noteCaptured": {
+    "message": "Este site é capturado em todas as abas."
+  },
+  "noteKept": {
+    "message": "Sem gravar. Os dados capturados antes continuam salvos."
+  },
+  "flowTotal": {
+    "message": "Gravação inteira ($ARG1$ sites) · requests: $ARG2$ · cookies: $ARG3$ · tokens: $ARG4$ · storage: $ARG5$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      },
+      "arg3": {
+        "content": "$3"
+      },
+      "arg4": {
+        "content": "$4"
+      },
+      "arg5": {
+        "content": "$5"
+      }
+    }
+  },
+  "statRequests": {
+    "message": "requests"
+  },
+  "statCookies": {
+    "message": "cookies"
+  },
+  "statTokens": {
+    "message": "tokens"
+  },
+  "statStorage": {
+    "message": "storage"
+  },
+  "cookies": {
+    "message": "Cookies"
+  },
+  "tokens": {
+    "message": "Tokens"
+  },
+  "valuesHint": {
+    "message": "Os valores ficam criptografados no vault. Veja no dashboard → Sessão."
+  },
+  "latestRequests": {
+    "message": "Últimas requisições"
+  },
+  "recentEmpty": {
+    "message": "Navegue pelo site; as chamadas de API aparecem aqui."
+  },
+  "capturing": {
+    "message": "Capturando"
+  },
+  "nothingCaptured": {
+    "message": "Nada. Clique em “Gravar esta aba” em um site."
+  },
+  "sentThisSession": {
+    "message": "Enviados nesta sessão:"
+  },
+  "openDashboard": {
+    "message": "Abrir dashboard"
+  },
+  "removeDomain": {
+    "message": "Parar de capturar $ARG1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "failed": {
+    "message": "Falhou"
+  },
+  "daemonUnreachable": {
+    "message": "Não foi possível falar com o daemon."
+  },
+  "blocklisted": {
+    "message": "Este site está na lista de bloqueio."
+  }
+}

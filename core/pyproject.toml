@@ -1,0 +1,86 @@
+[project]
+name = "sessiontap"
+version = "1.0.0"
+description = "Hand the session you already have in your browser to your scripts — locally and securely."
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "SessionTap contributors" }]
+requires-python = ">=3.11"
+keywords = ["session", "cookies", "browser", "automation", "scraping", "playwright", "mcp"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Private :: Do Not Upload",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Security",
+]
+# The base install is the SDK only: light enough for any scraping project.
+dependencies = [
+  "httpx>=0.28",
+  "platformdirs>=4.3",
+]
+
+[project.optional-dependencies]
+# The local daemon, CLI commands that talk to it, and the native host.
+server = [
+  "cryptography>=44",
+  "fastapi>=0.115",
+  "keyring>=25",
+  "pydantic>=2.10",
+  "uvicorn>=0.34",
+]
+mcp = ["mcp>=2.0"]
+
+[project.scripts]
+sessiontap = "sessiontap.cli:main"
+sessiontap-host = "sessiontap.nativehost:main"
+
+[project.urls]
+Homepage = "https://github.com/AndreNogueir4/SessionTap"
+Issues = "https://github.com/AndreNogueir4/SessionTap/issues"
+Security = "https://github.com/AndreNogueir4/SessionTap/security/policy"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.15",
+  "pytest>=8.3",
+  "pytest-cov>=6",
+  "ruff>=0.11",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sessiontap"]
+# The dashboard is built by CI into server/web (git-ignored) before packaging.
+artifacts = ["src/sessiontap/server/web/**"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["sessiontap"]
+mypy_path = "src"
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["keyring.*", "mcp.*", "requests.*", "curl_cffi.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

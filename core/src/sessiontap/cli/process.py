@@ -79,8 +79,9 @@ class DaemonProcess:
             kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
             kernel32.CloseHandle(handle)
             return code.value == 259
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        return True
+        else:
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                return False
+            return True

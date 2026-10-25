@@ -1,4 +1,5 @@
 import io
+import sys
 import json
 import pytest
 import zipfile
@@ -128,7 +129,8 @@ def test_openapi_and_bundle_commands(
     assert "Bundle written" in run(["bundle", "example.com", "-o", "b.zip"], ctx)
     bundle = tmp_path / "b.zip"
     assert "README.md" in zipfile.ZipFile(bundle).namelist()
-    assert bundle.stat().st_mode & 0o777 == 0o600
+    if sys.platform != "win32":
+        assert bundle.stat().st_mode & 0o777 == 0o600
 
 
 def test_blocklist_command(sdk: Client) -> None:

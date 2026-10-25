@@ -29,7 +29,8 @@ def read_secret(path: Path) -> str | None:
 def is_private(path: Path) -> bool:
     if sys.platform == "win32":
         return True
-    return stat.S_IMODE(path.stat().st_mode) & 0o077 == 0
+    else:
+        return stat.S_IMODE(path.stat().st_mode) & 0o077 == 0
 
 
 def restrict(path: Path) -> None:

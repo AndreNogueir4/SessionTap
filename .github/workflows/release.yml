@@ -1,0 +1,70 @@
+# Creates a GitHub release when a tag like v1.0.0 is pushed.
+#
+# * Nothing is published to PyPI or npm: SessionTap is installed from a clone.
+# * The release carries ready-to-load extension zips, a SHA-256 checksum,
+#   a Sigstore signature and an SBOM.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check versions match the tag
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -q "^version = \"$v\"" core/pyproject.toml
+          grep -q "\"version\": \"$v\"" extension/manifest.chromium.json
+          grep -q "\"version\": \"$v\"" extension/manifest.firefox.json
+          grep -q "\"version\": \"$v\"" sdk/js/package.json
+      - run: npm ci
+      - run: npm run build
+      - name: Package extensions
+        run: |
+          mkdir -p release
+          (cd extension/dist/chromium && zip -qr "../../../release/sessiontap-extension-chromium-${GITHUB_REF_NAME}.zip" .)
+          (cd extension/dist/firefox && zip -qr "../../../release/sessiontap-extension-firefox-${GITHUB_REF_NAME}.zip" .)
+      - uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: .
+          format: spdx-json
+          output-file: release/sessiontap-${{ github.ref_name }}.spdx.json
+          upload-artifact: false
+      - name: Checksums
+        run: cd release && sha256sum * > SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # Sigstore keyless signing
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+      - uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: ./release/*
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: release/*
+          generate_release_notes: true

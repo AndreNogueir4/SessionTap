@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Fake credentials used as test fixtures for redaction"
+paths = ['''^core/tests/''']
+
+[[allowlists]]
+description = "Public key that pins the Chromium extension ID"
+paths = ['''^extension/manifest\.chromium\.json$''']

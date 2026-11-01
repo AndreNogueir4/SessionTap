@@ -281,8 +281,13 @@ uv tool install --reinstall "./core[server,mcp]"   # na pasta do seu clone
 }
 ```
 
-Ferramentas: `list_domains`, `session_health`, `list_requests`, `get_request`,
-`generate_code` e `openapi_spec`. O servidor é **somente leitura** e **nunca retorna
+Ferramentas: `list_domains`, `session_health`, `list_requests`, `search_bodies`,
+`get_request`, `read_body`, `json_shape`, `query_html`, `diff_requests`, `generate_code` e
+`openapi_spec`. Com elas o agente trabalha sem ler bodies inteiros: `search_bodies` acha
+quais requisições contêm um valor, `json_shape` resume uma resposta JSON, `query_html` roda
+um seletor CSS numa página salva, `read_body` lê bodies longos em partes (ou devolve só o
+texto visível da página com `text=true`) e `diff_requests` mostra quais valores mudam entre
+duas chamadas. O servidor é **somente leitura** e **nunca retorna
 cookies ou tokens em claro**. O agente consegue escrever código que funciona, mas as
 credenciais só existem quando *você* roda esse código.
 

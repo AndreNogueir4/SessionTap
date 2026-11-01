@@ -1,6 +1,6 @@
 [project]
 name = "sessiontap"
-version = "1.0.0"
+version = "1.1.0"
 description = "Hand the session you already have in your browser to your scripts — locally and securely."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -26,8 +26,10 @@ dependencies = [
 # The local daemon, CLI commands that talk to it, and the native host.
 server = [
   "cryptography>=44",
+  "cssselect>=1.2",
   "fastapi>=0.115",
   "keyring>=25",
+  "lxml>=5.3",
   "pydantic>=2.10",
   "uvicorn>=0.34",
 ]
@@ -44,6 +46,7 @@ Security = "https://github.com/AndreNogueir4/SessionTap/security/policy"
 
 [dependency-groups]
 dev = [
+  "lxml-stubs>=0.5",
   "mypy>=1.15",
   "pytest>=8.3",
   "pytest-cov>=6",

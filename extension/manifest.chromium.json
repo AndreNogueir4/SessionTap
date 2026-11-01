@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SessionTap",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "default_locale": "en",
   "description": "__MSG_extDescription__",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoLWSQeYH9l5IqNmXbso+bz+33gPlzPvvfzjTvfRB35giYmtqSGg8cU6PEN7TBmU8JPAQriuvPsoRilf9wXa7gILW84WO7jPohbe4rhJks/0cYBE1Qey3n8F+71g9ndOBbvfodimSF3Uw5iAPDDnTnWfqQHFi/jf95CZ99lYusfTn7crFGd5cfeO6ggQAsZylgHq4plkd3fw2bzhoY10sxvsoRP/bDmTnK2rn4tdOzQgP099nzCvg52XUxZf8xu9XJ5KAVAutCXc61bv/ZbAKo/3nflcZ9g5wUqcrY4IHLsJE5nHCuB+K8UQr6D+h87XfQyxhMfdQdiT+2/youslDEQIDAQAB",

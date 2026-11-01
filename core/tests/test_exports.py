@@ -7,6 +7,7 @@ from .conftest import exchange
 from .test_capture import ingest
 from sessiontap import nativehost
 from fastapi.testclient import TestClient
+from sessiontap.server.htmltext import html_to_text
 from sessiontap.server.capture import MAX_HTML_BYTES
 
 BEARER = "Bearer s3cr3t-bearer-value"
@@ -87,6 +88,64 @@ def test_body_limit_and_download(api: TestClient) -> None:
     assert raw.text == PAGE
     assert raw.headers["content-type"].startswith("text/plain")
     assert "attachment" in raw.headers["content-disposition"]
+
+
+def test_body_chunks_page_through_the_whole_body(api: TestClient) -> None:
+    seed(api)
+    doc = next(
+        r
+        for r in api.get("/v1/requests", params={"domain": "example.com"}).json()
+        if r["resource_type"] == "Document"
+    )
+    parts: list[str] = []
+    offset: int | None = 0
+    while offset is not None:
+        chunk = api.get(
+            f"/v1/requests/{doc['id']}/chunk", params={"offset": offset, "length": 200_000}
+        ).json()
+        assert chunk["total"] == len(PAGE)
+        parts.append(chunk["content"])
+        offset = chunk["next_offset"]
+    assert "".join(parts) == PAGE
+    assert len(parts) == -(-len(PAGE) // 200_000)
+    too_big = api.get(f"/v1/requests/{doc['id']}/chunk", params={"length": 200_001})
+    assert too_big.status_code == 422
+
+
+def test_body_chunks_turn_html_into_text(api: TestClient) -> None:
+    api.put("/v1/domains/example.com", json={"capture": True})
+    html = (
+        "<html><head><title>Orders</title><style>p{color:red}</style>"
+        "<script>var token='SCRIPT-ONLY'</script></head><body><h1>My   orders</h1>"
+        "<p>Total: R$&nbsp;19,90</p><noscript>enable js</noscript><ul><li>one</li>"
+        "<li>two</li></ul></body></html>"
+    )
+    ingest(api, page("https://www.example.com/orders", html))
+    rid = api.get("/v1/requests").json()[0]["id"]
+    chunk = api.get(f"/v1/requests/{rid}/chunk", params={"text": True}).json()
+    assert chunk["text"] is True
+    assert chunk["content"] == "Orders\nMy orders\nTotal: R$\xa019,90\none\ntwo"
+    assert chunk["next_offset"] is None
+
+
+def test_html_text_ignores_svg_titles_and_scripts() -> None:
+    html = (
+        "<p>Pay<svg><g><title>credit card icon</title></g></svg>ment</p>"
+        "<p>a<script>if (a < b) { x = '</p>' }</script>b</p><div>unclosed <b>bold"
+    )
+    assert html_to_text(html) == "Payment\nab\nunclosed bold"
+    assert html_to_text("") == ""
+
+
+def test_body_chunks_mask_secrets(api: TestClient) -> None:
+    seed(api)
+    rows = api.get("/v1/requests", params={"domain": "example.com"}).json()
+    rid = next(r for r in rows if r["resource_type"] != "Document")["id"]
+    for part in ("request", "response"):
+        chunk = api.get(f"/v1/requests/{rid}/chunk", params={"part": part, "text": True}).json()
+        assert chunk["text"] is False
+        assert "hunter2" not in chunk["content"]
+        assert "r3fr3sh" not in chunk["content"]
 
 
 def test_openapi_has_masked_examples(api: TestClient) -> None:
@@ -185,3 +244,62 @@ def test_native_host_rejects_bad_uploads(monkeypatch: pytest.MonkeyPatch) -> Non
     for i in range(nativehost.MAX_UPLOADS + 2):
         nativehost.handle(part(0, "x", False, upload=f"u{i}"), d, uploads)
     assert len(uploads.parts) == nativehost.MAX_UPLOADS
+
+
+def seed_mixed(api: TestClient) -> None:
+    api.put("/v1/domains/example.com", json={"capture": True})
+    ingest(
+        api,
+        exchange("https://api.example.com/a", status=200),
+        exchange("https://api.example.com/b", method="POST", status=201),
+        exchange("https://api.example.com/c", method="DELETE", status=404),
+        exchange("https://cdn.example.com/d", status=503, mime_type="text/plain"),
+        exchange("https://api.example.com/e", status=None, error="net::ERR_FAILED"),
+        page("https://www.example.com/", "<p>hi</p>"),
+    )
+
+
+def paths(api: TestClient, **params: Any) -> list[str]:
+    rows = api.get("/v1/requests", params={"domain": "example.com", **params}).json()
+    return sorted(r["path"] for r in rows)
+
+
+def test_request_filters(api: TestClient) -> None:
+    seed_mixed(api)
+    assert paths(api, method=["post", "delete"]) == ["/b", "/c"]
+    assert paths(api, status=["4xx", "5xx"]) == ["/c", "/d"]
+    assert paths(api, status=["error"]) == ["/e"]
+    assert paths(api, host="cdn.example.com") == ["/d"]
+    assert paths(api, mime="text/html") == ["/"]
+    assert paths(api, api_only=True) == ["/a", "/b", "/c", "/d", "/e"]
+    assert paths(api, method="GET", status="2xx", api_only=True) == ["/a"]
+    bad = api.get("/v1/requests", params={"domain": "example.com", "status": "6xx"})
+    assert bad.status_code == 422
+
+
+def test_request_pages_do_not_overlap(api: TestClient) -> None:
+    seed_mixed(api)
+    first = api.get("/v1/requests", params={"domain": "example.com", "limit": 4}).json()
+    rest = api.get("/v1/requests", params={"domain": "example.com", "limit": 4, "offset": 4}).json()
+    assert len(first) == 4
+    assert len(rest) == 2
+    assert not {r["id"] for r in first} & {r["id"] for r in rest}
+
+
+def test_request_facets(api: TestClient) -> None:
+    seed_mixed(api)
+    facets = api.get("/v1/requests/facets", params={"domain": "example.com"}).json()
+    assert facets["total"] == 6
+    assert facets["methods"][0] == {"value": "GET", "count": 4}
+    statuses = {s["value"]: s["count"] for s in facets["statuses"]}
+    assert statuses == {"2xx": 3, "4xx": 1, "5xx": 1, "error": 1}
+    assert {h["value"] for h in facets["hosts"]} == {
+        "api.example.com",
+        "cdn.example.com",
+        "www.example.com",
+    }
+    api_only = api.get(
+        "/v1/requests/facets", params={"domain": "example.com", "api_only": True}
+    ).json()
+    assert api_only["total"] == 5
+    assert "text/html" not in {m["value"] for m in api_only["mime_types"]}

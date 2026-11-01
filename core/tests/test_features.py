@@ -204,6 +204,8 @@ def test_mcp_tools_never_return_secrets(api: TestClient, sdk: Client) -> None:
             ("list_domains", {}),
             ("list_requests", {"domain": "example.com"}),
             ("get_request", {"request_id": rid}),
+            ("read_body", {"request_id": rid}),
+            ("read_body", {"request_id": rid, "part": "request", "text": True}),
             ("generate_code", {"request_id": rid, "language": "curl"}),
             ("session_health", {"domain": "example.com"}),
             ("openapi_spec", {"domain": "example.com"}),
@@ -214,3 +216,23 @@ def test_mcp_tools_never_return_secrets(api: TestClient, sdk: Client) -> None:
     text = asyncio.run(call_all())
     assert "example.com" in text
     assert "MCP-SECRET" not in text
+
+
+def test_mcp_get_request_limits_bodies_on_the_server(api: TestClient, sdk: Client) -> None:
+    api.put("/v1/domains/example.com", json={"capture": True})
+    api.post(
+        "/v1/ingest", json={"events": [exchange("https://example.com/a", response_body="x" * 5000)]}
+    )
+    rid = api.get("/v1/requests").json()[0]["id"]
+    server = build(sdk)
+
+    async def call(name: str, args: dict[str, Any]) -> Any:
+        result: Any = await server.call_tool(name, args)
+        return json.loads(result.content[0].text)
+
+    short = asyncio.run(call("get_request", {"request_id": rid, "max_body_chars": 100}))
+    rest = asyncio.run(call("read_body", {"request_id": rid, "offset": 4000}))
+    assert short["response_body"] == "x" * 100 + "\n…[truncated at 100 of 5000 chars]"
+    assert short["response_body_size"] == 5000
+    assert rest["content"] == "x" * 1000
+    assert rest["next_offset"] is None

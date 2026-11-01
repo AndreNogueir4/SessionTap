@@ -118,9 +118,13 @@ def _walk(node: Any, depth: int) -> Iterator[tuple[str, str]]:
 _SECRET_KEY_PARTS = ("password", "passwd", "pwd", "secret", "token", "otp", "jwt", "auth")
 
 
-def _is_secret_key(key: str) -> bool:
+def is_secret_key(key: str) -> bool:
     k = key.lower()
     return key in _BODY_TOKEN_KEYS or any(part in k for part in _SECRET_KEY_PARTS)
+
+
+def is_secret_param(key: str) -> bool:
+    return is_secret_key(key) or key.lower() in ("key", "sig", "signature")
 
 
 def _mask_json(node: Any, depth: int = 0) -> Any:
@@ -128,7 +132,7 @@ def _mask_json(node: Any, depth: int = 0) -> Any:
         return node
     if isinstance(node, dict):
         return {
-            k: (mask(v) if isinstance(v, str) and _is_secret_key(k) else _mask_json(v, depth + 1))
+            k: (mask(v) if isinstance(v, str) and is_secret_key(k) else _mask_json(v, depth + 1))
             for k, v in node.items()
         }
     if isinstance(node, list):
@@ -149,9 +153,9 @@ def mask_body(body: str | None, content_type: str | None) -> str | None:
         return body if masked == parsed else json.dumps(masked)
     if "x-www-form-urlencoded" in ctype:
         pairs = parse_qsl(body, keep_blank_values=True)
-        if not any(_is_secret_key(k) for k, _ in pairs):
+        if not any(is_secret_key(k) for k, _ in pairs):
             return body
-        return urlencode([(k, mask(v) if _is_secret_key(k) else v) for k, v in pairs])
+        return urlencode([(k, mask(v) if is_secret_key(k) else v) for k, v in pairs])
     return body
 
 
@@ -160,10 +164,7 @@ def mask_url(url: str) -> str:
     if not parts.query:
         return url
     pairs = parse_qsl(parts.query, keep_blank_values=True)
-    if not any(_is_secret_key(k) or k.lower() in ("key", "sig", "signature") for k, _ in pairs):
+    if not any(is_secret_param(k) for k, _ in pairs):
         return url
-    masked = [
-        (k, "****" if _is_secret_key(k) or k.lower() in ("key", "sig", "signature") else v)
-        for k, v in pairs
-    ]
+    masked = [(k, "****" if is_secret_param(k) else v) for k, v in pairs]
     return urlunsplit(parts._replace(query=urlencode(masked)))

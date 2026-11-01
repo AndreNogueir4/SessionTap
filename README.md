@@ -279,8 +279,12 @@ uv tool install --reinstall "./core[server,mcp]"   # from your clone
 }
 ```
 
-Tools: `list_domains`, `session_health`, `list_requests`, `get_request`, `generate_code`
-and `openapi_spec`. The server is **read-only** and **never returns raw cookies or
+Tools: `list_domains`, `session_health`, `list_requests`, `search_bodies`, `get_request`,
+`read_body`, `json_shape`, `query_html`, `diff_requests`, `generate_code` and `openapi_spec`.
+They let the agent work without reading whole bodies: `search_bodies` finds which requests
+contain a value, `json_shape` summarises a JSON response, `query_html` runs a CSS selector
+on a saved page, `read_body` pages through long bodies (or returns a page's visible text
+with `text=true`) and `diff_requests` shows which values change between two calls. The server is **read-only** and **never returns raw cookies or
 tokens**. The agent can write working code, but credentials only exist when *you* run it.
 
 ## ⚙️ Configuration

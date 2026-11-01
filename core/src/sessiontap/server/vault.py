@@ -6,12 +6,20 @@ from typing import Any
 from pathlib import Path
 from sessiontap import secretfile
 from contextlib import contextmanager
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from sessiontap.server.crypto import Cipher, VaultKeyError
 from sessiontap.domains import cookie_applies, match_any, matches
 
 DEFAULT_RETENTION_DAYS = 7
 _KEY_CHECK = "sessiontap-key-check"
+_STATUS_SQL = {
+    "error": "error IS NOT NULL",
+    "2xx": "status BETWEEN 200 AND 299",
+    "3xx": "status BETWEEN 300 AND 399",
+    "4xx": "status BETWEEN 400 AND 499",
+    "5xx": "status BETWEEN 500 AND 599",
+}
+_API_ONLY_SQL = "(resource_type IS NULL OR resource_type != 'Document')"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -242,7 +250,17 @@ class Vault:
             return cur.lastrowid
 
     def list_requests(
-        self, domain: str | None = None, q: str | None = None, limit: int = 100, offset: int = 0
+        self,
+        domain: str | None = None,
+        q: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        methods: Sequence[str] = (),
+        statuses: Sequence[str] = (),
+        host: str | None = None,
+        mime: str | None = None,
+        api_only: bool = False,
     ) -> list[dict[str, Any]]:
         sql = (
             "SELECT id, domain, host, method, path, status, mime_type, resource_type, "
@@ -256,9 +274,47 @@ class Vault:
             sql += " AND (path LIKE ? ESCAPE '\\' OR host LIKE ? ESCAPE '\\')"
             like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
             params += [like, like]
+        if methods:
+            sql += " AND method IN (" + ", ".join("?" * len(methods)) + ")"
+            params += list(methods)
+        if statuses:
+            sql += " AND (" + " OR ".join(_STATUS_SQL[s] for s in statuses) + ")"
+        if host:
+            sql += " AND host = ?"
+            params.append(host)
+        if mime:
+            sql += " AND mime_type = ?"
+            params.append(mime)
+        if api_only:
+            sql += " AND " + _API_ONLY_SQL
         sql += " ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?"
         params += [limit, offset]
         return [dict(r) for r in self._query(sql, params)]
+
+    def request_facets(self, domain: str, api_only: bool = False) -> dict[str, Any]:
+        where = "domain = ?" + (" AND " + _API_ONLY_SQL if api_only else "")
+        status_case = (
+            "CASE "
+            + " ".join(f"WHEN {cond} THEN '{name}'" for name, cond in _STATUS_SQL.items())
+            + " END"
+        )
+
+        def counts(column: str) -> list[dict[str, Any]]:
+            rows = self._query(
+                f"SELECT {column} AS value, COUNT(*) AS count FROM requests "  # noqa: S608
+                f"WHERE {where} AND value IS NOT NULL GROUP BY value ORDER BY count DESC, value",
+                (domain,),
+            )
+            return [dict(r) for r in rows]
+
+        total = self._query(f"SELECT COUNT(*) AS n FROM requests WHERE {where}", (domain,))  # noqa: S608
+        return {
+            "total": total[0]["n"],
+            "methods": counts("method"),
+            "statuses": counts(status_case),
+            "hosts": counts("host"),
+            "mime_types": counts("mime_type"),
+        }
 
     def get_request(self, request_id: int) -> dict[str, Any] | None:
         rows = self._query("SELECT * FROM requests WHERE id = ?", (request_id,))
@@ -281,7 +337,7 @@ class Vault:
     def iter_requests(self, domain: str, api_only: bool = False) -> Iterator[dict[str, Any]]:
         sql = "SELECT id FROM requests WHERE domain = ?"
         if api_only:
-            sql += " AND (resource_type IS NULL OR resource_type != 'Document')"
+            sql += " AND " + _API_ONLY_SQL
         sql += " ORDER BY started_at, id"
         ids = [r["id"] for r in self._query(sql, (domain,))]
         for request_id in ids:

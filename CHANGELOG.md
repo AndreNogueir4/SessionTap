@@ -6,6 +6,41 @@ All notable changes to SessionTap are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-01
+
+### Added
+
+- MCP tool `read_body` and API endpoint `GET /v1/requests/{id}/chunk`: read a body in
+  chunks with `offset`/`length`, and with `text=true` get an HTML page as plain text
+  (no tags, scripts or styles).
+- MCP tool `search_bodies` and `GET /v1/search`: find which requests of a domain contain
+  some text in the URL, headers or bodies, with snippets. Secrets are masked before
+  searching, so they can't be found.
+- MCP tool `json_shape` and `GET /v1/requests/{id}/shape`: keys, types, one example per
+  field and array lengths of a JSON body.
+- MCP tool `query_html` and `GET /v1/requests/{id}/html`: run a CSS selector on a saved
+  HTML page and get each match's text and attributes. CSRF tokens in `<meta>` and hidden
+  `<input>` values are masked.
+- MCP tool `diff_requests` and `GET /v1/requests/{a}/diff/{b}`: compare two requests
+  field by field (query, headers, JSON or form bodies); secret values stay masked but
+  still show whether they changed.
+- Dashboard request list: infinite scroll (pages of 100) instead of the first 200 only,
+  and filters by method, status class (2xx–5xx, errors), host and content type, with
+  counts. API: `GET /v1/requests` accepts `method`, `status`, `host`, `mime` and
+  `api_only`; `GET /v1/requests/facets` returns the counts.
+- Dashboard: JSON bodies as a collapsible tree, and a "Copy as" menu on each row
+  (curl, Python, fetch) that copies code without secrets.
+- Dashboard: captured HTML pages can be viewed as a static page (sandboxed iframe with
+  no scripts, styles or network access), as source, or as extracted text.
+- Dashboard: select two requests and compare them side by side.
+- New server dependencies: `lxml` (HTML parsing for `read_body` and `query_html`) and
+  `cssselect` (CSS selectors).
+
+### Changed
+
+- MCP `get_request` asks the daemon for truncated bodies instead of downloading them
+  in full, and tells the agent the real size of each truncated body.
+
 ## [1.0.0] - 2026-10-24
 
 First release. SessionTap is a from-scratch rewrite inspired by
@@ -93,5 +128,6 @@ repository; nothing is published to PyPI or npm.
 - `rust_finder`.
 - The manual "register extension ID" step.
 
-[Unreleased]: https://github.com/AndreNogueir4/SessionTap/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/AndreNogueir4/SessionTap/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/AndreNogueir4/SessionTap/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/AndreNogueir4/SessionTap/releases/tag/v1.0.0

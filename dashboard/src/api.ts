@@ -35,6 +35,70 @@ export interface RequestDetail extends RequestSummary {
   body_truncated: boolean;
 }
 
+export type StatusClass = "2xx" | "3xx" | "4xx" | "5xx" | "error";
+
+export interface RequestFilters {
+  q: string;
+  methods: string[];
+  statuses: StatusClass[];
+  host: string;
+  mime: string;
+  apiOnly: boolean;
+}
+
+export interface FacetCount<T = string> {
+  value: T;
+  count: number;
+}
+
+export interface Facets {
+  total: number;
+  methods: FacetCount[];
+  statuses: FacetCount<StatusClass>[];
+  hosts: FacetCount[];
+  mime_types: FacetCount[];
+}
+
+export interface BodyChunk {
+  request_id: number;
+  part: "request" | "response";
+  text: boolean;
+  offset: number;
+  total: number;
+  next_offset: number | null;
+  content: string;
+}
+
+export interface DiffChange {
+  key: string;
+  a?: unknown;
+  b?: unknown;
+  only_in?: "a" | "b";
+}
+
+export interface DiffSection {
+  changes: DiffChange[];
+  more?: number;
+}
+
+export interface BodyDiff extends Partial<DiffSection> {
+  equal?: boolean;
+  a_size?: number;
+  b_size?: number;
+}
+
+export interface RequestDiff {
+  a: number;
+  b: number;
+  same_endpoint: boolean;
+  request: Record<string, { a: unknown; b: unknown }>;
+  query: DiffSection;
+  request_headers: DiffSection;
+  request_body: BodyDiff;
+  response_headers: DiffSection;
+  response_body: BodyDiff;
+}
+
 export type ExpiryState = "ok" | "expiring" | "expired" | "session" | "unknown";
 
 export interface Health {
@@ -187,6 +251,17 @@ export async function download(path: string, filename: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+function requestQuery(domain: string, f: RequestFilters, offset: number, limit: number): URLSearchParams {
+  const params = new URLSearchParams({ domain, limit: String(limit), offset: String(offset) });
+  if (f.q) params.set("q", f.q);
+  for (const m of f.methods) params.append("method", m);
+  for (const s of f.statuses) params.append("status", s);
+  if (f.host) params.set("host", f.host);
+  if (f.mime) params.set("mime", f.mime);
+  if (f.apiOnly) params.set("api_only", "true");
+  return params;
+}
+
 export const api = {
   status: () => get<Status>("/v1/status"),
   settings: () => get<Settings>("/v1/settings"),
@@ -199,10 +274,20 @@ export const api = {
   setCapture: (domain: string, capture: boolean) =>
     call("PUT", `/v1/domains/${encodeURIComponent(domain)}`, { capture }),
   purge: (domain: string) => call("DELETE", `/v1/domains/${encodeURIComponent(domain)}`),
-  requests: (domain: string, q: string, limit = 200) =>
-    get<RequestSummary[]>(
-      `/v1/requests?${new URLSearchParams({ domain, limit: String(limit), ...(q ? { q } : {}) })}`,
+  requests: (domain: string, filters: RequestFilters, offset: number, limit: number) =>
+    get<RequestSummary[]>(`/v1/requests?${requestQuery(domain, filters, offset, limit)}`),
+  facets: (domain: string, apiOnly: boolean) =>
+    get<Facets>(`/v1/requests/facets?${new URLSearchParams({ domain, api_only: String(apiOnly) })}`),
+  chunk: (id: number, opts: { part?: "request" | "response"; text?: boolean; offset?: number; length?: number }) =>
+    get<BodyChunk>(
+      `/v1/requests/${id}/chunk?${new URLSearchParams({
+        part: opts.part ?? "response",
+        text: String(opts.text ?? false),
+        offset: String(opts.offset ?? 0),
+        length: String(opts.length ?? 200_000),
+      })}`,
     ),
+  diff: (a: number, b: number) => get<RequestDiff>(`/v1/requests/${a}/diff/${b}`),
   request: (id: number, reveal: boolean, bodyLimit: number) =>
     get<RequestDetail>(`/v1/requests/${id}?reveal=${reveal}&body_limit=${bodyLimit}`),
   code: (id: number, lang: string, includeSecrets: boolean) =>

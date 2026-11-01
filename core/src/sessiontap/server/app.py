@@ -1,3 +1,4 @@
+import re
 import hmac
 import json
 import time
@@ -19,10 +20,10 @@ from starlette.concurrency import run_in_threadpool
 from sessiontap.server.policy import Policy, PolicyLocked
 from fastapi import FastAPI, HTTPException, Query, Request
 from collections.abc import AsyncIterator, Callable, Iterator
-from sessiontap.server import bundle, codegen, openapi, sensitive
 from sessiontap.server.security import BodyTooLarge, SecurityMiddleware
 from sessiontap.domains import InvalidDomain, match_any, normalize_domain
 from sessiontap.server.capture import Cookie, IngestBatch, Ingestor, MAX_HTML_BYTES
+from sessiontap.server import analysis, bundle, codegen, htmltext, openapi, sensitive
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -34,6 +35,10 @@ from fastapi.responses import (
 
 RETENTION_TASK_INTERVAL = 3600
 LOGIN_CODE_TTL = 60
+MAX_CHUNK = 200_000
+MAX_QUERY_HTML = 20 * 1024 * 1024
+MAX_SEARCH_SCAN = 2000
+StatusClass = Literal["error", "2xx", "3xx", "4xx", "5xx"]
 
 
 class EventBus:
@@ -323,8 +328,27 @@ def create_app(
         q: Annotated[str | None, Query(max_length=200)] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 100,
         offset: Annotated[int, Query(ge=0)] = 0,
+        method: Annotated[list[str], Query(max_length=20)] = [],  # noqa: B006
+        status: Annotated[list[StatusClass], Query(max_length=5)] = [],  # noqa: B006
+        host: Annotated[str | None, Query(max_length=253)] = None,
+        mime: Annotated[str | None, Query(max_length=200)] = None,
+        api_only: bool = False,
     ) -> list[dict[str, Any]]:
-        return vault.list_requests(_domain(domain) if domain else None, q, limit, offset)
+        return vault.list_requests(
+            _domain(domain) if domain else None,
+            q,
+            limit,
+            offset,
+            methods=[m.upper() for m in method],
+            statuses=status,
+            host=host,
+            mime=mime,
+            api_only=api_only,
+        )
+
+    @app.get("/v1/requests/facets")
+    def request_facets(domain: str, api_only: bool = False) -> dict[str, Any]:
+        return vault.request_facets(_domain(domain), api_only)
 
     def load_request(request_id: int) -> dict[str, Any]:
         r = vault.get_request(request_id)
@@ -367,6 +391,90 @@ def create_app(
                 "content-disposition": f'attachment; filename="request-{request_id}-{part}.{ext}"'
             },
         )
+
+    @app.get("/v1/requests/{request_id}/chunk")
+    def get_request_chunk(
+        request_id: int,
+        part: Literal["request", "response"] = "response",
+        text: bool = False,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        length: Annotated[int, Query(ge=1, le=MAX_CHUNK)] = 20000,
+    ) -> dict[str, Any]:
+        r = get_request(request_id)
+        body = r[f"{part}_body"] or ""
+        as_text = text and part == "response" and "html" in (r["mime_type"] or "")
+        if as_text:
+            body = htmltext.html_to_text(body)
+        end = min(offset + length, len(body))
+        return {
+            "request_id": request_id,
+            "part": part,
+            "text": as_text,
+            "offset": offset,
+            "total": len(body),
+            "next_offset": end if end < len(body) else None,
+            "content": body[offset:end],
+        }
+
+    @app.get("/v1/requests/{request_id}/shape")
+    def get_request_shape(
+        request_id: int, part: Literal["request", "response"] = "response"
+    ) -> dict[str, Any]:
+        body = get_request(request_id)[f"{part}_body"]
+        try:
+            parsed = json.loads(body or "")
+        except ValueError:
+            raise HTTPException(422, f"the {part} body is not JSON") from None
+        return {"request_id": request_id, "part": part, "shape": analysis.shape(parsed)}
+
+    @app.get("/v1/requests/{request_id}/html")
+    def query_request_html(
+        request_id: int,
+        selector: Annotated[str, Query(min_length=1, max_length=500)],
+        limit: Annotated[int, Query(ge=1, le=500)] = 50,
+        html: bool = False,
+    ) -> dict[str, Any]:
+        r = get_request(request_id)
+        if "html" not in (r["mime_type"] or "") or not r["response_body"]:
+            raise HTTPException(422, "the response is not an HTML page")
+        if len(r["response_body"]) > MAX_QUERY_HTML:
+            raise HTTPException(413, "the page is too large to query; use read_body")
+        try:
+            result = htmltext.select(r["response_body"], selector, limit, html)
+        except htmltext.InvalidSelector as e:
+            raise HTTPException(422, f"invalid CSS selector: {e}") from None
+        return {"request_id": request_id, "selector": selector, **result}
+
+    @app.get("/v1/requests/{a}/diff/{b}")
+    def diff_requests(a: int, b: int) -> dict[str, Any]:
+        return analysis.diff(load_request(a), load_request(b))
+
+    @app.get("/v1/search")
+    def search_bodies(
+        domain: str,
+        q: Annotated[str, Query(min_length=1, max_length=200)],
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+        scan: Annotated[int, Query(ge=1, le=MAX_SEARCH_SCAN)] = 500,
+        context: Annotated[int, Query(ge=0, le=500)] = 80,
+    ) -> dict[str, Any]:
+        pattern = re.compile(re.escape(q), re.IGNORECASE)
+        rows = vault.list_requests(_domain(domain), None, scan, 0)
+        results: list[dict[str, Any]] = []
+        scanned = 0
+        for row in rows:
+            if len(results) >= limit:
+                break
+            scanned += 1
+            hits = analysis.search_request(get_request(row["id"]), pattern, context)
+            if hits:
+                keys = ("id", "method", "host", "path", "status", "mime_type", "resource_type")
+                results.append({**{k: row[k] for k in keys}, "hits": hits})
+        return {
+            "query": q,
+            "scanned": scanned,
+            "more": scanned < len(rows) or len(rows) == scan,
+            "results": results,
+        }
 
     @app.get("/v1/requests/{request_id}/code", response_class=PlainTextResponse)
     def request_code(

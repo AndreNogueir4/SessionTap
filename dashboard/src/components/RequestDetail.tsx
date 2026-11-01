@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api, download, type RequestDetail } from "../api";
 import { bytes, prettyBody, statusClass } from "../format";
 import { CodeView } from "./CodeView";
+import { HtmlView } from "./HtmlView";
+import { JsonTree, parseJson } from "./JsonTree";
 import { t } from "../i18n";
 
 function HeaderTable({ headers }: { headers: Record<string, string> }) {
@@ -23,6 +25,25 @@ function HeaderTable({ headers }: { headers: Record<string, string> }) {
 
 const BODY_PREVIEW = 200_000;
 
+function JsonBody({ body }: { body: string }) {
+  const [raw, setRaw] = useState(false);
+  const parsed = parseJson(body);
+  if (!parsed.ok) return <pre className="body">{body}</pre>;
+  return (
+    <div className="body-view">
+      <div className="code-bar">
+        <button className={raw ? "chip" : "chip active"} onClick={() => setRaw(false)}>
+          {t("json.tree")}
+        </button>
+        <button className={raw ? "chip active" : "chip"} onClick={() => setRaw(true)}>
+          {t("json.raw")}
+        </button>
+      </div>
+      {raw ? <pre className="body">{prettyBody(body)}</pre> : <JsonTree value={parsed.value} />}
+    </div>
+  );
+}
+
 export function RequestDetailView({ id, onClose }: { id: number; onClose: () => void }) {
   const [reveal, setReveal] = useState(false);
   const [r, setR] = useState<RequestDetail | null>(null);
@@ -36,6 +57,8 @@ export function RequestDetailView({ id, onClose }: { id: number; onClose: () => 
   }, [id, reveal]);
 
   if (!r) return <section className="detail">{t("common.loading")}</section>;
+
+  const isHtml = r.mime_type?.includes("html") ?? false;
 
   return (
     <section className="detail">
@@ -62,7 +85,7 @@ export function RequestDetailView({ id, onClose }: { id: number; onClose: () => 
       {r.request_body && (
         <>
           <h3>{t("detail.requestBody")}</h3>
-          <pre className="body">{prettyBody(r.request_body)}</pre>
+          <JsonBody body={r.request_body} />
         </>
       )}
 
@@ -73,7 +96,7 @@ export function RequestDetailView({ id, onClose }: { id: number; onClose: () => 
       </h3>
       {r.response_body ? (
         <>
-          {r.response_body_size > r.response_body.length && (
+          {!isHtml && r.response_body_size > r.response_body.length && (
             <p className="muted small">
               {t("detail.preview", { shown: bytes(r.response_body.length), total: bytes(r.response_body_size) })}
             </p>
@@ -83,15 +106,19 @@ export function RequestDetailView({ id, onClose }: { id: number; onClose: () => 
             onClick={() =>
               void download(
                 `/v1/requests/${r.id}/body?part=response&reveal=${reveal}`,
-                `request-${r.id}.${r.mime_type?.includes("html") ? "html" : "txt"}`,
+                `request-${r.id}.${isHtml ? "html" : "txt"}`,
               )
             }
           >
             {t("detail.download")}
           </button>
-          <pre className="body">
-            {r.response_body_size > r.response_body.length ? r.response_body : prettyBody(r.response_body)}
-          </pre>
+          {isHtml ? (
+            <HtmlView id={r.id} reveal={reveal} preview={r.response_body} size={r.response_body_size} />
+          ) : r.response_body_size > r.response_body.length ? (
+            <pre className="body">{r.response_body}</pre>
+          ) : (
+            <JsonBody body={r.response_body} />
+          )}
         </>
       ) : (
         <p className="muted">{t("detail.noBody")}</p>
